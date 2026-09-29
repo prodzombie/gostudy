@@ -9,7 +9,7 @@ type Card struct {
 	Answer   string
 	ID       huid.HUID
 	Question string
-	Tags     []*Tag
+	Tags     *Tag
 }
 
 // Tag names a category that can be attached to a card.
