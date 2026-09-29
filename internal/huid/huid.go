@@ -1,5 +1,6 @@
 package huid
 
+// HUID holds an identifier value; construction and validation are not implemented yet.
 type HUID struct {
 	value string
 }
