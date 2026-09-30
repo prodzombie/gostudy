@@ -23,9 +23,9 @@ type Store struct{ root string }
 // New selects the directory containing the cards folder.
 func New(root string) Store { return Store{root: root} }
 
-// Add creates a card and returns its generated ID.
+// Add creates a card, optionally with blank question and answer sections.
 func (s Store) Add(tag, question, answer string) (huid.HUID, error) {
-	if !card.ValidTag(tag) || strings.TrimSpace(question) == "" || strings.TrimSpace(answer) == "" {
+	if !card.ValidTag(tag) {
 		return huid.HUID{}, fmt.Errorf("add requires a safe tag, a question, and an answer")
 	}
 	var suffix [6]byte
@@ -107,14 +107,23 @@ func (s Store) List(filter string) ([]Entry, error) {
 
 // Read returns a card's complete Markdown file.
 func (s Store) Read(id string) ([]byte, error) {
-	entries, err := s.List("")
+	path, err := s.Path(id)
 	if err != nil {
 		return nil, err
 	}
+	return os.ReadFile(path)
+}
+
+// Path locates the Markdown file for an existing card.
+func (s Store) Path(id string) (string, error) {
+	entries, err := s.List("")
+	if err != nil {
+		return "", err
+	}
 	for _, entry := range entries {
 		if entry.ID == id {
-			return os.ReadFile(filepath.Join(s.root, "cards", entry.Tag, entry.ID, "CARD.md"))
+			return filepath.Abs(filepath.Join(s.root, "cards", entry.Tag, entry.ID, "CARD.md"))
 		}
 	}
-	return nil, fmt.Errorf("card %s not found", id)
+	return "", fmt.Errorf("card %s not found", id)
 }
