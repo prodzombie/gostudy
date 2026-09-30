@@ -55,3 +55,12 @@ New cards are immediately due. The SM-2 scheduler gives successful reviews inter
 Review progress is stored as four flat frontmatter properties: `ease_factor`, `interval` (days), `repetitions`, and `last_reviewed` (an RFC 3339 timestamp). Other properties and the Markdown body are preserved when saving. Cards must have nonempty `## Question` and `## Answer` sections; malformed cards or scheduling properties produce an error. Keep scheduling properties in the generated flat scalar format. Edit card bodies and custom properties freely; avoid editing a card concurrently with a review session.
 
 For development, use `make build` to create `bin/gostudy`, `make check` to run tests and vet, and `make fmt` to format the source. `make run ARGS='review -t go'` runs the CLI with arguments. Run `make help` to list all targets.
+
+Example cards under `examples/cards/` teach the repository's layout, package responsibilities, commands, review scheduling, and development workflow. Explore or study them with:
+
+```sh
+make run ARGS='-d examples list'
+make run ARGS='-d examples review -t gostudy'
+```
+
+Reviewing the examples saves your progress in their `CARD.md` frontmatter, just like any other cards.
