@@ -30,3 +30,13 @@ A view over an array.
 ```
 
 Options use single-letter names and precede operands. `--` ends option parsing. Usage errors exit with status 2; other errors exit with status 1.
+
+To create a blank card and open it in your editor:
+
+```sh
+export EDITOR='vim'
+go run . add -e -t go
+go run . edit HUID
+```
+
+`add -e` also accepts `-q` and `-a` to prefill the card. The editor receives the card's absolute path and uses the current terminal; the CLI waits for it to exit. `$EDITOR` must be set and can contain a command with arguments, such as `code --wait`. An editor error returns status 1; a newly created card remains saved and its ID is printed before the editor opens.

@@ -12,7 +12,7 @@ func TestCardCommands(t *testing.T) {
 	root := t.TempDir()
 	call := func(args ...string) (int, string, string) {
 		var out, errOut bytes.Buffer
-		status := Run(append([]string{"-d", root}, args...), &out, &errOut)
+		status := Run(append([]string{"-d", root}, args...), strings.NewReader(""), &out, &errOut)
 		return status, out.String(), errOut.String()
 	}
 
@@ -49,11 +49,38 @@ func TestInvalidInputsDoNotCreateCards(t *testing.T) {
 		{"add", "-t", "go", "-q", "Q", "-a", "A", "extra"},
 	} {
 		var out, errOut bytes.Buffer
-		if status := Run(append([]string{"-d", root}, args...), &out, &errOut); status != 2 || out.Len() != 0 {
+		if status := Run(append([]string{"-d", root}, args...), strings.NewReader(""), &out, &errOut); status != 2 || out.Len() != 0 {
 			t.Errorf("%v: status %d, output %q", args, status, out.String())
 		}
 	}
 	if _, err := os.Stat(filepath.Join(root, "cards")); !os.IsNotExist(err) {
 		t.Fatalf("cards directory created: %v", err)
+	}
+}
+
+func TestEditorCommands(t *testing.T) {
+	root := t.TempDir()
+	script := filepath.Join(root, "editor.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nprintf '\\nEdited\\n' >> \"$1\"\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("EDITOR", "sh '"+script+"'")
+	var out, errOut bytes.Buffer
+	status := Run([]string{"-d", root, "add", "-e", "-t", "go"}, strings.NewReader(""), &out, &errOut)
+	if status != 0 {
+		t.Fatalf("add -e: %d, %s", status, errOut.String())
+	}
+	id := strings.TrimSpace(out.String())
+	out.Reset()
+	status = Run([]string{"-d", root, "edit", id}, strings.NewReader(""), &out, &errOut)
+	if status != 0 {
+		t.Fatalf("edit: %d, %s", status, errOut.String())
+	}
+	content, err := os.ReadFile(filepath.Join(root, "cards", "go", id, "CARD.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(content), "Edited") != 2 {
+		t.Fatalf("editor did not modify card twice: %s", content)
 	}
 }

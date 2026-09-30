@@ -9,13 +9,14 @@ import (
 
 	"github.com/emiliopalmerini/gostudy/internal/card"
 	"github.com/emiliopalmerini/gostudy/internal/cardstore"
+	"github.com/emiliopalmerini/gostudy/internal/editor"
 	"github.com/emiliopalmerini/gostudy/internal/huid"
 )
 
 // Run executes the CLI and returns its process exit status.
-func Run(args []string, out, errOut io.Writer) int {
+func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 	usage := func(w io.Writer) {
-		fmt.Fprint(w, "Usage: gostudy [-d DIR] COMMAND [OPTIONS] [ARGUMENTS]\n\nCommands:\n  add  -t TAG -q QUESTION -a ANSWER\n  list [-t TAG]\n  show HUID\n  help\n\nCards live in DIR/cards/TAG/HUID/CARD.md (DIR defaults to .).\n")
+		fmt.Fprint(w, "Usage: gostudy [-d DIR] COMMAND [OPTIONS] [ARGUMENTS]\n\nCommands:\n  add  [-e] -t TAG [-q QUESTION] [-a ANSWER]\n  list [-t TAG]\n  show HUID\n  edit HUID\n  help\n\nCards live in DIR/cards/TAG/HUID/CARD.md (DIR defaults to .).\n")
 	}
 	if len(args) == 0 {
 		usage(errOut)
@@ -42,9 +43,11 @@ func Run(args []string, out, errOut io.Writer) int {
 		usage(out)
 		return 0
 	case "add":
-		return addCommand(*root, args[1:], out, errOut)
+		return addCommand(*root, args[1:], in, out, errOut)
 	case "list":
 		return listCommand(*root, args[1:], out, errOut)
+	case "edit":
+		return editCommand(*root, args[1:], in, out, errOut)
 	case "show":
 		return showCommand(*root, args[1:], out, errOut)
 	default:
@@ -68,15 +71,16 @@ func commandFlags(name, synopsis string, errOut io.Writer) *flag.FlagSet {
 	return fs
 }
 
-func addCommand(root string, args []string, out, errOut io.Writer) int {
-	fs := commandFlags("add", "-t TAG -q QUESTION -a ANSWER", errOut)
+func addCommand(root string, args []string, in io.Reader, out, errOut io.Writer) int {
+	fs := commandFlags("add", "[-e] -t TAG [-q QUESTION] [-a ANSWER]", errOut)
+	open := fs.Bool("e", false, "open the card in EDITOR")
 	tag := fs.String("t", "", "card tag")
 	question := fs.String("q", "", "question text")
 	answer := fs.String("a", "", "answer text")
 	if err := fs.Parse(args); err != nil {
 		return flagStatus(err)
 	}
-	if fs.NArg() != 0 || !card.ValidTag(*tag) || strings.TrimSpace(*question) == "" || strings.TrimSpace(*answer) == "" {
+	if fs.NArg() != 0 || !card.ValidTag(*tag) || !*open && (strings.TrimSpace(*question) == "" || strings.TrimSpace(*answer) == "") {
 		fmt.Fprintln(errOut, "gostudy: add requires a safe tag, a question, and an answer")
 		fs.Usage()
 		return 2
@@ -86,6 +90,15 @@ func addCommand(root string, args []string, out, errOut io.Writer) int {
 		return commandError(errOut, err)
 	}
 	fmt.Fprintln(out, id)
+	if *open {
+		path, err := cardstore.New(root).Path(id.String())
+		if err != nil {
+			return commandError(errOut, err)
+		}
+		if err := editor.Open(path, in, out, errOut); err != nil {
+			return commandError(errOut, err)
+		}
+	}
 	return 0
 }
 
@@ -131,4 +144,23 @@ func showCommand(root string, args []string, out, errOut io.Writer) int {
 func commandError(errOut io.Writer, err error) int {
 	fmt.Fprintf(errOut, "gostudy: %v\n", err)
 	return 1
+}
+
+func editCommand(root string, args []string, in io.Reader, out, errOut io.Writer) int {
+	fs := commandFlags("edit", "HUID", errOut)
+	if err := fs.Parse(args); err != nil {
+		return flagStatus(err)
+	}
+	if fs.NArg() != 1 || !huid.Valid(fs.Arg(0)) {
+		fs.Usage()
+		return 2
+	}
+	path, err := cardstore.New(root).Path(fs.Arg(0))
+	if err != nil {
+		return commandError(errOut, err)
+	}
+	if err := editor.Open(path, in, out, errOut); err != nil {
+		return commandError(errOut, err)
+	}
+	return 0
 }
