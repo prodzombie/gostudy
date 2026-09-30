@@ -84,3 +84,20 @@ func TestEditorCommands(t *testing.T) {
 		t.Fatalf("editor did not modify card twice: %s", content)
 	}
 }
+
+func TestReviewCommand(t *testing.T) {
+	root := t.TempDir()
+	var out, errOut bytes.Buffer
+	if status := Run([]string{"-d", root, "add", "-t", "go", "-q", "Q", "-a", "A"}, strings.NewReader(""), &out, &errOut); status != 0 {
+		t.Fatal(errOut.String())
+	}
+	out.Reset()
+	if status := Run([]string{"-d", root, "review", "-t", "go"}, strings.NewReader("\n5\n"), &out, &errOut); status != 0 || !strings.Contains(out.String(), "Reviewed 1 card.") {
+		t.Fatalf("review output: %s; error: %s; status: %d", &out, &errOut, status)
+	}
+	for _, args := range [][]string{{"review", "-t", "../bad"}, {"review", "extra"}} {
+		if status := Run(args, strings.NewReader(""), &out, &errOut); status != 2 {
+			t.Errorf("%v: status %d", args, status)
+		}
+	}
+}
