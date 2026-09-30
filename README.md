@@ -64,3 +64,5 @@ make run ARGS='-d examples review -t gostudy'
 ```
 
 Reviewing the examples saves your progress in their `CARD.md` frontmatter, just like any other cards.
+
+Licensed under the [BSD Zero Clause License (0BSD)](LICENSE), which permits use, modification, and redistribution without attribution requirements.
