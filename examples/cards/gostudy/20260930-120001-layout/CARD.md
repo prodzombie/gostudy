@@ -2,10 +2,6 @@
 id: "20260930-120001-layout"
 tags:
   - "gostudy"
-ease_factor: 2.36
-interval: 1
-repetitions: 1
-last_reviewed: "2026-09-30T21:50:58.639119Z"
 ---
 
 ## Question

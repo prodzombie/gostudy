@@ -2,10 +2,6 @@
 id: "20260930-120002-packages"
 tags:
   - "gostudy"
-ease_factor: 2.5
-interval: 1
-repetitions: 0
-last_reviewed: "2026-09-30T21:51:18.131277Z"
 ---
 
 ## Question

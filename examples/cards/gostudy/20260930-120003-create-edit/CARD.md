@@ -2,10 +2,6 @@
 id: "20260930-120003-create-edit"
 tags:
   - "gostudy"
-ease_factor: 2.6
-interval: 1
-repetitions: 1
-last_reviewed: "2026-09-30T21:51:45.297041Z"
 ---
 
 ## Question
