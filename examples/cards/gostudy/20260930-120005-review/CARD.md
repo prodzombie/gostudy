@@ -2,10 +2,6 @@
 id: "20260930-120005-review"
 tags:
   - "gostudy"
-ease_factor: 2.6
-interval: 1
-repetitions: 1
-last_reviewed: "2026-09-30T21:53:14.092468Z"
 ---
 
 ## Question
