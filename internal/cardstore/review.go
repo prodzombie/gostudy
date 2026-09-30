@@ -44,6 +44,9 @@ func (s Store) Load(id string) (card.Card, schedule.Schedule, error) {
 	if err != nil {
 		return card.Card{}, schedule.Schedule{}, fmt.Errorf("card %s: %w", id, err)
 	}
+	if question == "" || answer == "" {
+		return card.Card{}, schedule.Schedule{}, fmt.Errorf("card %s: question and answer must not be blank", id)
+	}
 	return card.Card{ID: parsed, Question: question, Answer: answer, Tags: &card.Tag{Value: filepath.Base(filepath.Dir(filepath.Dir(path)))}}, progress, nil
 }
 
@@ -232,11 +235,29 @@ func cardSections(body string) (string, string, error) {
 		if start >= 0 && text == "## Answer" {
 			question := strings.TrimSpace(strings.Join(lines[start:i], ""))
 			answer := strings.TrimSpace(strings.Join(lines[i+1:], ""))
-			if question == "" || answer == "" {
-				return "", "", fmt.Errorf("question and answer must not be blank")
-			}
 			return question, answer, nil
 		}
 	}
 	return "", "", fmt.Errorf("missing Question or Answer section")
+}
+
+// Question reads the question section, including blank cards awaiting editing.
+func (s Store) Question(entry Entry) (string, error) {
+	id := entry.ID
+	if !huid.Valid(id) || !card.ValidTag(entry.Tag) {
+		return "", fmt.Errorf("invalid card entry")
+	}
+	content, err := os.ReadFile(filepath.Join(s.root, "cards", entry.Tag, id, "CARD.md"))
+	if err != nil {
+		return "", err
+	}
+	lines, end, err := frontmatter(string(content))
+	if err != nil {
+		return "", fmt.Errorf("card %s: %w", id, err)
+	}
+	question, _, err := cardSections(strings.Join(lines[end+1:], ""))
+	if err != nil {
+		return "", fmt.Errorf("card %s: %w", id, err)
+	}
+	return question, nil
 }

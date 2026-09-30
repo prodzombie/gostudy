@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/emiliopalmerini/gostudy/internal/cardstore"
 )
 
 func TestCardCommands(t *testing.T) {
@@ -31,7 +33,7 @@ func TestCardCommands(t *testing.T) {
 		t.Errorf("CARD.md = %q; want %q", content, want)
 	}
 	status, listed, diagnostic := call("list", "-t", "go")
-	if status != 0 || listed != id+"\tgo\n" || diagnostic != "" {
+	if status != 0 || listed != "go -> "+id+" -> What is a slice?\n" || diagnostic != "" {
 		t.Errorf("list: status %d, output %q, diagnostic %q", status, listed, diagnostic)
 	}
 	status, shown, diagnostic := call("show", id)
@@ -99,5 +101,33 @@ func TestReviewCommand(t *testing.T) {
 		if status := Run(args, strings.NewReader(""), &out, &errOut); status != 2 {
 			t.Errorf("%v: status %d", args, status)
 		}
+	}
+}
+
+func TestListQuestionsIncludesIncompleteCards(t *testing.T) {
+	root := t.TempDir()
+	store := cardstore.New(root)
+	id, err := store.Add("go", "First line\n\nSecond\tline", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	blank, err := store.Add("other", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if status := Run([]string{"-d", root, "list"}, strings.NewReader(""), &out, &errOut); status != 0 {
+		t.Fatalf("status %d: %s", status, &errOut)
+	}
+	want := "go -> " + id.String() + " -> First line Second line\nother -> " + blank.String() + " -> \n"
+	if out.String() != want {
+		t.Fatalf("list = %q; want %q", out.String(), want)
+	}
+	out.Reset()
+	if status := Run([]string{"-d", root, "list", "-t", "go"}, strings.NewReader(""), &out, &errOut); status != 0 {
+		t.Fatalf("status %d: %s", status, &errOut)
+	}
+	if out.String() != strings.SplitN(want, "\n", 2)[0]+"\n" {
+		t.Fatalf("filtered list: %q", out.String())
 	}
 }
