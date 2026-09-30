@@ -2,6 +2,10 @@
 id: "20260930-120006-development"
 tags:
   - "gostudy"
+ease_factor: 2.5
+interval: 1
+repetitions: 0
+last_reviewed: "2026-09-30T21:53:23.188401Z"
 ---
 
 ## Question

@@ -2,6 +2,10 @@
 id: "20260930-120004-commands"
 tags:
   - "gostudy"
+ease_factor: 2.36
+interval: 1
+repetitions: 1
+last_reviewed: "2026-09-30T21:53:08.061705Z"
 ---
 
 ## Question
