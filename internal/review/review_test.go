@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/cardstore"
-	"github.com/emiliopalmerini/gostudy/internal/schedule"
+	"github.com/prodzombie/gostudy/internal/cardstore"
+	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
 func TestReviewSelectsDueCardsAndPersistsGrades(t *testing.T) {

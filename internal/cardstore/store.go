@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/card"
-	"github.com/emiliopalmerini/gostudy/internal/huid"
+	"github.com/prodzombie/gostudy/internal/card"
+	"github.com/prodzombie/gostudy/internal/huid"
 )
 
 // Store locates cards under a root directory.

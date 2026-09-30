@@ -4,9 +4,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/card"
-	"github.com/emiliopalmerini/gostudy/internal/cardstore"
-	"github.com/emiliopalmerini/gostudy/internal/review"
+	"github.com/prodzombie/gostudy/internal/card"
+	"github.com/prodzombie/gostudy/internal/cardstore"
+	"github.com/prodzombie/gostudy/internal/review"
 )
 
 func reviewCommand(root string, args []string, in io.Reader, out, errOut io.Writer) int {

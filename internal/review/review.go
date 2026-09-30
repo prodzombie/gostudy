@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/card"
-	"github.com/emiliopalmerini/gostudy/internal/cardstore"
-	"github.com/emiliopalmerini/gostudy/internal/schedule"
+	"github.com/prodzombie/gostudy/internal/card"
+	"github.com/prodzombie/gostudy/internal/cardstore"
+	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
 type dueCard struct {

@@ -7,10 +7,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/emiliopalmerini/gostudy/internal/card"
-	"github.com/emiliopalmerini/gostudy/internal/cardstore"
-	"github.com/emiliopalmerini/gostudy/internal/editor"
-	"github.com/emiliopalmerini/gostudy/internal/huid"
+	"github.com/prodzombie/gostudy/internal/card"
+	"github.com/prodzombie/gostudy/internal/cardstore"
+	"github.com/prodzombie/gostudy/internal/editor"
+	"github.com/prodzombie/gostudy/internal/huid"
 )
 
 // Run executes the CLI and returns its process exit status.

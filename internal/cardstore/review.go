@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/card"
-	"github.com/emiliopalmerini/gostudy/internal/huid"
-	"github.com/emiliopalmerini/gostudy/internal/schedule"
+	"github.com/prodzombie/gostudy/internal/card"
+	"github.com/prodzombie/gostudy/internal/huid"
+	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
 var scheduleKeys = []string{"ease_factor", "interval", "repetitions", "last_reviewed"}
