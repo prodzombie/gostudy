@@ -119,7 +119,14 @@ func listCommand(root string, args []string, out, errOut io.Writer) int {
 		return commandError(errOut, err)
 	}
 	for _, entry := range entries {
-		fmt.Fprintf(out, "%s\t%s\n", entry.ID, entry.Tag)
+		question, err := cardstore.New(root).Question(entry)
+		if err != nil {
+			return commandError(errOut, err)
+		}
+		question = strings.Join(strings.Fields(question), " ")
+		if _, err := fmt.Fprintf(out, "%s -> %s -> %s\n", entry.Tag, entry.ID, question); err != nil {
+			return commandError(errOut, err)
+		}
 	}
 	return 0
 }

@@ -9,7 +9,7 @@ go run . list -t go
 go run . show HUID
 ```
 
-Use `-d DIR` before the command to select a different root directory. By default, cards live under the current directory. `add` prints the new HUID; `list` prints one HUID and tag per line, separated by a tab; `show` prints the card file. `help` prints the command summary.
+Use `-d DIR` before the command to select a different root directory. By default, cards live under the current directory. `add` prints the new HUID; `list` prints `TAG -> HUID -> question` per line, condensing multiline questions into one line; `show` prints the card file. `help` prints the command summary.
 
 Each card is stored at `cards/TAG/HUID/CARD.md`. Tags are one path component and may contain ASCII letters, digits, `_`, and `-`; a tag must contain at least one non-digit. The file has YAML frontmatter with `id` and `tags` properties, followed by `## Question` and `## Answer` sections. The body can contain Markdown. For example:
 
