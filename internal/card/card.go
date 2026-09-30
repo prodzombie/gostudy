@@ -1,7 +1,7 @@
 package card
 
 import (
-	"github.com/emiliopalmerini/gostudy/internal/huid"
+	"github.com/prodzombie/gostudy/internal/huid"
 )
 
 // Card pairs a study question with its answer and tags.

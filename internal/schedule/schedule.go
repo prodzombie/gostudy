@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/huid"
+	"github.com/prodzombie/gostudy/internal/huid"
 )
 
 // Schedule tracks a card's progress through spaced repetition.

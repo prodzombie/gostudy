@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/emiliopalmerini/gostudy/internal/cardstore"
+	"github.com/prodzombie/gostudy/internal/cardstore"
 )
 
 func TestCardCommands(t *testing.T) {

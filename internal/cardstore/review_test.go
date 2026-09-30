@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emiliopalmerini/gostudy/internal/schedule"
+	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
 func TestLoadAndSaveSchedulePreserveMarkdown(t *testing.T) {
