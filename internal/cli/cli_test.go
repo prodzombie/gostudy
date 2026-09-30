@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ func TestCardCommands(t *testing.T) {
 	root := t.TempDir()
 	call := func(args ...string) (int, string, string) {
 		var out, errOut bytes.Buffer
-		status := run(append([]string{"-d", root}, args...), &out, &errOut)
+		status := Run(append([]string{"-d", root}, args...), &out, &errOut)
 		return status, out.String(), errOut.String()
 	}
 
@@ -49,7 +49,7 @@ func TestInvalidInputsDoNotCreateCards(t *testing.T) {
 		{"add", "-t", "go", "-q", "Q", "-a", "A", "extra"},
 	} {
 		var out, errOut bytes.Buffer
-		if status := run(append([]string{"-d", root}, args...), &out, &errOut); status != 2 || out.Len() != 0 {
+		if status := Run(append([]string{"-d", root}, args...), &out, &errOut); status != 2 || out.Len() != 0 {
 			t.Errorf("%v: status %d, output %q", args, status, out.String())
 		}
 	}
