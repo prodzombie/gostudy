@@ -50,6 +50,8 @@ go run . review -t go
 
 The session shows each question, waits for Enter to reveal the answer, then asks for a grade from 0 to 5. Grades 0–2 mean forgotten, 3 means hard, 4 good, and 5 easy. Enter `q` at either prompt to stop. End of input also stops the session. A card is saved only after a valid grade, so stopping preserves completed reviews and leaves the current ungraded card unchanged.
 
+In a terminal, each new question clears the visible screen while preserving scrollback. Revealing the answer redraws the question and answer together, with bold section labels and dimmed tag and ID below the content. Redirected output and `TERM=dumb` use plain text without screen clearing or styling.
+
 New cards are immediately due. The SM-2 scheduler gives successful reviews intervals of 1 day, 6 days, then the previous interval multiplied by the ease factor; a forgotten card restarts at 1 day. The next review is due at the last review's UTC timestamp plus the interval in days.
 
 Review progress is stored as four flat frontmatter properties: `ease_factor`, `interval` (days), `repetitions`, and `last_reviewed` (an RFC 3339 timestamp). Other properties and the Markdown body are preserved when saving. Cards must have nonempty `## Question` and `## Answer` sections; malformed cards or scheduling properties produce an error. Keep scheduling properties in the generated flat scalar format. Edit card bodies and custom properties freely; avoid editing a card concurrently with a review session.
