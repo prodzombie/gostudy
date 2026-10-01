@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,15 @@ type dueCard struct {
 // Run reviews due cards, saving each grade before continuing to the next card.
 // Quitting or reaching EOF leaves the current ungraded card unchanged.
 func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time) error {
+	terminal := false
+	if file, ok := out.(*os.File); ok && os.Getenv("TERM") != "dumb" {
+		info, err := file.Stat()
+		terminal = err == nil && info.Mode()&os.ModeCharDevice != 0
+	}
+	return run(store, tag, in, out, now, terminal)
+}
+
+func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time, terminal bool) error {
 	entries, err := store.List(tag)
 	if err != nil {
 		return err
@@ -61,7 +71,7 @@ func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		return err
 	}
 	for _, item := range due {
-		if _, err := fmt.Fprintf(out, "\nCard %s [%s]\n\n%s\n\n", item.card.ID, item.card.Tags.Value, item.card.Question); err != nil {
+		if err := showCard(out, item.card, false, terminal); err != nil {
 			return err
 		}
 		for {
@@ -76,7 +86,7 @@ func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				break
 			}
 		}
-		if _, err := fmt.Fprintf(out, "\n%s\n\n", item.card.Answer); err != nil {
+		if err := showCard(out, item.card, true, terminal); err != nil {
 			return err
 		}
 		for {
@@ -109,4 +119,29 @@ func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		}
 	}
 	return finish()
+}
+
+// Terminal frames redraw both sections so metadata stays below the study content.
+// Plain output appends the answer, preserving a readable session transcript.
+func showCard(out io.Writer, content card.Card, revealed, terminal bool) error {
+	bold, dim, reset := "", "", ""
+	if terminal {
+		bold, dim, reset = "\x1b[1m", "\x1b[2m", "\x1b[0m"
+		// Clear the visible screen and home the cursor, preserving scrollback.
+		if _, err := fmt.Fprint(out, "\x1b[2J\x1b[H"); err != nil {
+			return err
+		}
+	}
+	if !revealed || terminal {
+		if _, err := fmt.Fprintf(out, "\n%sQuestion%s\n\n%s\n\n", bold, reset, content.Question); err != nil {
+			return err
+		}
+	}
+	if revealed {
+		if _, err := fmt.Fprintf(out, "\n%sAnswer%s\n\n%s\n\n", bold, reset, content.Answer); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintf(out, "%s[%s] · %s%s\n\n", dim, content.Tags.Value, content.ID, reset)
+	return err
 }
