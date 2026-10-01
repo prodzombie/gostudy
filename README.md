@@ -62,9 +62,9 @@ Example cards under `examples/cards/` teach the repository's layout, package res
 
 ```sh
 make run ARGS='-d examples list'
-make run ARGS='-d examples review -t gostudy'
+make demo
 ```
 
-Reviewing the examples saves your progress in their `CARD.md` frontmatter, just like any other cards.
+`make demo` reviews a temporary copy of the examples and removes it when the session ends. Each demo starts fresh and leaves the original examples unchanged. To keep your progress, copy `examples/cards/` into a personal directory and review that directory with `-d DIR`.
 
 Licensed under the [BSD Zero Clause License (0BSD)](LICENSE), which permits use, modification, and redistribution without attribution requirements.
