@@ -10,7 +10,8 @@ import (
 )
 
 func reviewCommand(root string, args []string, in io.Reader, out, errOut io.Writer) int {
-	fs := commandFlags("review", "[-t TAG]", errOut)
+	fs := commandFlags("review", "[-n] [-t TAG]", errOut)
+	practice := fs.Bool("n", false, "practice all matching cards without saving progress")
 	tag := fs.String("t", "", "review only this tag")
 	if err := fs.Parse(args); err != nil {
 		return flagStatus(err)
@@ -19,7 +20,7 @@ func reviewCommand(root string, args []string, in io.Reader, out, errOut io.Writ
 		fs.Usage()
 		return 2
 	}
-	if err := review.Run(cardstore.New(root), *tag, in, out, time.Now); err != nil {
+	if err := review.RunWithOptions(cardstore.New(root), *tag, in, out, time.Now, review.Options{Practice: *practice}); err != nil {
 		return commandError(errOut, err)
 	}
 	return 0

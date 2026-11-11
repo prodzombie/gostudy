@@ -16,7 +16,7 @@ import (
 // Run executes the CLI and returns its process exit status.
 func Run(args []string, in io.Reader, out, errOut io.Writer) int {
 	usage := func(w io.Writer) {
-		fmt.Fprint(w, "Usage: gostudy [-d DIR] COMMAND [OPTIONS] [ARGUMENTS]\n\nCommands:\n  add  [-e] -t TAG [-q QUESTION] [-a ANSWER]\n  list [-t TAG]\n  show HUID\n  edit HUID\n  review [-t TAG]\n  help\n\nCards live in DIR/cards/TAG/HUID/CARD.md (DIR defaults to .).\n")
+		fmt.Fprint(w, "Usage: gostudy [-d DIR] COMMAND [OPTIONS] [ARGUMENTS]\n\nCommands:\n  add  [-e] -t TAG [-q QUESTION] [-a ANSWER]\n  list [-t TAG]\n  show HUID\n  edit HUID\n  review [-n] [-t TAG]\n  help\n\nCards live in DIR/cards/TAG/HUID/CARD.md (DIR defaults to .).\n")
 	}
 	if len(args) == 0 {
 		usage(errOut)

@@ -17,6 +17,9 @@ import (
 	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
+// Options controls whether a session records scheduled reviews.
+type Options struct{ Practice bool }
+
 type dueCard struct {
 	card     card.Card
 	progress schedule.Schedule
@@ -25,6 +28,11 @@ type dueCard struct {
 // Run reviews due cards, saving each grade before continuing to the next card.
 // Quitting or reaching EOF leaves the current ungraded card unchanged.
 func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time) error {
+	return RunWithOptions(store, tag, in, out, now, Options{})
+}
+
+// RunWithOptions runs either scheduled review or practice of all matching cards.
+func RunWithOptions(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time, options Options) error {
 	terminal := false
 	if file, ok := out.(*os.File); ok && os.Getenv("TERM") != "dumb" {
 		terminal = term.IsTerminal(int(file.Fd()))
@@ -32,10 +40,14 @@ func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 	if file, ok := in.(*os.File); !ok || !term.IsTerminal(int(file.Fd())) {
 		terminal = false
 	}
-	return run(store, tag, in, out, now, terminal)
+	return runSession(store, tag, in, out, now, terminal, options)
 }
 
 func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time, terminal bool) error {
+	return runSession(store, tag, in, out, now, terminal, Options{})
+}
+
+func runSession(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time, terminal bool, options Options) error {
 	entries, err := store.List(tag)
 	if err != nil {
 		return err
@@ -47,18 +59,27 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		if err != nil {
 			return err
 		}
-		if progress.LastReviewed == nil || !progress.LastReviewed.UTC().AddDate(0, 0, progress.Interval).After(cutoff) {
+		if options.Practice || progress.LastReviewed == nil || !progress.LastReviewed.UTC().AddDate(0, 0, progress.Interval).After(cutoff) {
 			due = append(due, dueCard{content, progress})
 		}
 	}
 	if len(due) == 0 {
-		_, err := fmt.Fprintln(out, "No cards are due.")
+		message := "No cards are due."
+		if options.Practice {
+			message = "No matching cards found."
+		}
+		_, err := fmt.Fprintln(out, message)
 		return err
 	}
 	if terminal {
-		return runScreen(store, due, in, out, now)
+		return runScreen(store, due, in, out, now, options)
 	}
 
+	if options.Practice {
+		if _, err := fmt.Fprintln(out, "Practice · no progress will be saved."); err != nil {
+			return err
+		}
+	}
 	scanner := bufio.NewScanner(in)
 	read := func(prompt string) (string, bool, error) {
 		if _, err := fmt.Fprint(out, prompt); err != nil {
@@ -79,7 +100,11 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		if completed {
 			status = "Session complete"
 		}
-		_, err := fmt.Fprintf(out, "\n%s. Reviewed %d %s. %d remaining in this session.\n", status, reviewed, noun, len(due)-reviewed)
+		verb := "Reviewed"
+		if options.Practice {
+			verb = "Practiced"
+		}
+		_, err := fmt.Fprintf(out, "\n%s. %s %d %s. %d remaining in this session.\n", status, verb, reviewed, noun, len(due)-reviewed)
 		return err
 	}
 	confirmation := ""
@@ -103,12 +128,23 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 			return err
 		}
 		for {
-			input, ok, err := read("Grade 0–5 (0–2 forgotten, 3 hard, 4 good, 5 easy; q to quit): ")
+			prompt := "Grade 0–5 (0–2 forgotten, 3 hard, 4 good, 5 easy; q to quit): "
+			if options.Practice {
+				prompt = "Press Enter for the next card (q to quit): "
+			}
+			input, ok, err := read(prompt)
 			if err != nil {
 				return err
 			}
 			if !ok || input == "q" {
 				return finish(false)
+			}
+			if options.Practice {
+				if input != "" {
+					continue
+				}
+				reviewed++
+				break
 			}
 			grade, err := strconv.Atoi(input)
 			if err != nil || grade < 0 || grade > 5 {

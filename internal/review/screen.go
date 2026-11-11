@@ -26,10 +26,11 @@ type screen struct {
 	grade, status        string
 	err                  error
 	palette              palette
+	practice             bool
 }
 
-func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer, now func() time.Time) error {
-	m := &screen{store: store, due: due, now: now, viewport: viewport.New(), palette: palette{dark: true, noColor: os.Getenv("NO_COLOR") != ""}}
+func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer, now func() time.Time, options Options) error {
+	m := &screen{practice: options.Practice, store: store, due: due, now: now, viewport: viewport.New(), palette: palette{dark: true, noColor: os.Getenv("NO_COLOR") != ""}}
 	if _, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
 		return err
 	}
@@ -45,7 +46,11 @@ func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer
 			return err
 		}
 	}
-	_, err := fmt.Fprintf(out, "%s. Reviewed %d of %d cards. %d remaining in this session.\n", state, m.index, len(due), len(due)-m.index)
+	verb := "Reviewed"
+	if m.practice {
+		verb = "Practiced"
+	}
+	_, err := fmt.Fprintf(out, "%s. %s %d of %d cards. %d remaining in this session.\n", state, verb, m.index, len(due), len(due)-m.index)
 	return err
 }
 
@@ -61,7 +66,11 @@ func (m *screen) header() string {
 	if m.revealed {
 		phase = "Answer"
 	}
-	return m.palette.secondary().Render(fmt.Sprintf("Card %d of %d · %s", m.index+1, len(m.due), m.due[m.index].card.Tags.Value)) + " · " + m.palette.accent().Render(phase) + "\n" + m.palette.success().Render(m.status)
+	prefix := ""
+	if m.practice {
+		prefix = "Practice · "
+	}
+	return prefix + m.palette.secondary().Render(fmt.Sprintf("Card %d of %d · %s", m.index+1, len(m.due), m.due[m.index].card.Tags.Value)) + " · " + m.palette.accent().Render(phase) + "\n" + m.palette.success().Render(m.status)
 }
 
 func (m *screen) footer() string {
@@ -72,6 +81,9 @@ func (m *screen) footer() string {
 	controls := m.palette.accent().Render("Enter: reveal")
 	if m.revealed {
 		controls = "Grade 0–5: 0–2 forgotten · 3 hard · 4 good · 5 easy\n" + m.palette.accent().Render("Grade: "+m.grade+" · Enter: save")
+	}
+	if m.practice && m.revealed {
+		controls = m.palette.accent().Render("Enter: next card")
 	}
 	help := "↑/↓ scroll · PgUp/PgDn page · ? help · q quit"
 	if m.help {
@@ -144,6 +156,14 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.revealed {
 				m.revealed = true
 				m.err = m.render(true)
+			} else if m.practice {
+				m.index++
+				if m.index == len(m.due) {
+					return m, tea.Quit
+				}
+				m.revealed = false
+				m.viewport.GotoTop()
+				m.err = m.render(false)
 			} else if len(m.grade) == 1 {
 				progress, err := schedule.Review(m.due[m.index].progress, int(m.grade[0]-'0'), m.now().UTC())
 				if err == nil {
@@ -167,7 +187,7 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = m.render(false)
 			}
 		case "0", "1", "2", "3", "4", "5":
-			if m.revealed {
+			if m.revealed && !m.practice {
 				m.grade = key
 			}
 		case "backspace":
