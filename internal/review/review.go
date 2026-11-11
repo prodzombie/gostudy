@@ -62,16 +62,21 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		return strings.TrimSpace(scanner.Text()), true, nil
 	}
 	reviewed := 0
-	finish := func() error {
+	finish := func(completed bool) error {
 		noun := "cards"
 		if reviewed == 1 {
 			noun = "card"
 		}
-		_, err := fmt.Fprintf(out, "\nReviewed %d %s.\n", reviewed, noun)
+		status := "Session stopped"
+		if completed {
+			status = "Session complete"
+		}
+		_, err := fmt.Fprintf(out, "\n%s. Reviewed %d %s. %d remaining in this session.\n", status, reviewed, noun, len(due)-reviewed)
 		return err
 	}
-	for _, item := range due {
-		if err := showCard(out, item.card, false, terminal); err != nil {
+	confirmation := ""
+	for index, item := range due {
+		if err := showCard(out, item.card, false, terminal, index+1, len(due), confirmation); err != nil {
 			return err
 		}
 		for {
@@ -80,13 +85,13 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				return err
 			}
 			if !ok || input == "q" {
-				return finish()
+				return finish(false)
 			}
 			if input == "" {
 				break
 			}
 		}
-		if err := showCard(out, item.card, true, terminal); err != nil {
+		if err := showCard(out, item.card, true, terminal, index+1, len(due), confirmation); err != nil {
 			return err
 		}
 		for {
@@ -95,7 +100,7 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				return err
 			}
 			if !ok || input == "q" {
-				return finish()
+				return finish(false)
 			}
 			grade, err := strconv.Atoi(input)
 			if err != nil || grade < 0 || grade > 5 {
@@ -112,18 +117,26 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				return err
 			}
 			reviewed++
-			if _, err := fmt.Fprintf(out, "Next review: %s.\n", progress.LastReviewed.AddDate(0, 0, progress.Interval).Format(time.RFC3339)); err != nil {
-				return err
+			unit := "days"
+			if progress.Interval == 1 {
+				unit = "day"
+			}
+			confirmation = fmt.Sprintf("Previous card saved · due in %d %s", progress.Interval, unit)
+			// The next terminal frame carries confirmation; the final card has no next frame.
+			if !terminal || reviewed == len(due) {
+				if _, err := fmt.Fprintln(out, confirmation); err != nil {
+					return err
+				}
 			}
 			break
 		}
 	}
-	return finish()
+	return finish(true)
 }
 
 // Terminal frames redraw both sections so metadata stays below the study content.
 // Plain output appends the answer, preserving a readable session transcript.
-func showCard(out io.Writer, content card.Card, revealed, terminal bool) error {
+func showCard(out io.Writer, content card.Card, revealed, terminal bool, position, total int, confirmation string) error {
 	bold, dim, reset := "", "", ""
 	if terminal {
 		bold, dim, reset = "\x1b[1m", "\x1b[2m", "\x1b[0m"
@@ -133,6 +146,14 @@ func showCard(out io.Writer, content card.Card, revealed, terminal bool) error {
 		}
 	}
 	if !revealed || terminal {
+		if _, err := fmt.Fprintf(out, "\nCard %d of %d · %s\n", position, total, content.Tags.Value); err != nil {
+			return err
+		}
+		if terminal && confirmation != "" {
+			if _, err := fmt.Fprintln(out, confirmation); err != nil {
+				return err
+			}
+		}
 		if _, err := fmt.Fprintf(out, "\n%sQuestion%s\n\n%s\n\n", bold, reset, content.Question); err != nil {
 			return err
 		}

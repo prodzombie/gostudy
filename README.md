@@ -50,6 +50,8 @@ go run . review -t go
 
 The session shows each question, waits for Enter to reveal the answer, then asks for a grade from 0 to 5. Grades 0–2 mean forgotten, 3 means hard, 4 good, and 5 easy. Enter `q` at either prompt to stop. End of input also stops the session. A card is saved only after a valid grade, so stopping preserves completed reviews and leaves the current ungraded card unchanged.
 
+Each card shows its position in the session. After grading, a save confirmation shows the next review interval; in a terminal it stays visible on the next card. The closing summary distinguishes a completed session from an early stop and reports how many cards remain in that session.
+
 In a terminal, each new question clears the visible screen while preserving scrollback. Revealing the answer redraws the question and answer together, with bold section labels and dimmed tag and ID below the content. Redirected output and `TERM=dumb` use plain text without screen clearing or styling.
 
 New cards are immediately due. The SM-2 scheduler gives successful reviews intervals of 1 day, 6 days, then the previous interval multiplied by the ease factor; a forgotten card restarts at 1 day. The next review is due at the last review's UTC timestamp plus the interval in days.
