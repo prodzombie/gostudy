@@ -3,6 +3,7 @@ package review
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -24,10 +25,11 @@ type screen struct {
 	revealed, help       bool
 	grade, status        string
 	err                  error
+	palette              palette
 }
 
 func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer, now func() time.Time) error {
-	m := &screen{store: store, due: due, now: now, viewport: viewport.New()}
+	m := &screen{store: store, due: due, now: now, viewport: viewport.New(), palette: palette{dark: true, noColor: os.Getenv("NO_COLOR") != ""}}
 	if _, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
 		return err
 	}
@@ -47,14 +49,19 @@ func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer
 	return err
 }
 
-func (m *screen) Init() tea.Cmd { return nil }
+func (m *screen) Init() tea.Cmd {
+	if m.palette.noColor {
+		return nil
+	}
+	return tea.RequestBackgroundColor
+}
 
 func (m *screen) header() string {
 	phase := "Question"
 	if m.revealed {
 		phase = "Answer"
 	}
-	return fmt.Sprintf("Card %d of %d · %s · %s\n%s", m.index+1, len(m.due), m.due[m.index].card.Tags.Value, phase, m.status)
+	return m.palette.secondary().Render(fmt.Sprintf("Card %d of %d · %s", m.index+1, len(m.due), m.due[m.index].card.Tags.Value)) + " · " + m.palette.accent().Render(phase) + "\n" + m.palette.success().Render(m.status)
 }
 
 func (m *screen) footer() string {
@@ -62,15 +69,15 @@ func (m *screen) footer() string {
 	if m.viewport.TotalLineCount() > m.viewport.Height() {
 		reading = fmt.Sprintf("Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
-	controls := "Enter: reveal"
+	controls := m.palette.accent().Render("Enter: reveal")
 	if m.revealed {
-		controls = "Grade 0–5: 0–2 forgotten · 3 hard · 4 good · 5 easy\nGrade: " + m.grade + " · Enter: save"
+		controls = "Grade 0–5: 0–2 forgotten · 3 hard · 4 good · 5 easy\n" + m.palette.accent().Render("Grade: "+m.grade+" · Enter: save")
 	}
 	help := "↑/↓ scroll · PgUp/PgDn page · ? help · q quit"
 	if m.help {
 		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nBackspace: clear grade · Ctrl+C: quit"
 	}
-	return reading + "\n" + help + "\n" + controls
+	return m.palette.secondary().Render(reading) + "\n" + m.palette.secondary().Render(help) + "\n" + controls
 }
 
 func (m *screen) layout() {
@@ -84,7 +91,7 @@ func (m *screen) render(jumpToAnswer bool) error {
 		return nil
 	}
 	m.layout()
-	r, err := newMarkdownRenderer(max(1, min(80, m.width-1)))
+	r, err := themedMarkdownRenderer(max(1, min(80, m.width-1)), m.palette)
 	if err != nil {
 		return err
 	}
@@ -92,14 +99,14 @@ func (m *screen) render(jumpToAnswer bool) error {
 	if err != nil {
 		return err
 	}
-	content := "Question\n\n" + strings.Trim(question, "\n")
+	content := m.palette.accent().Render("Question") + "\n\n" + strings.Trim(question, "\n")
 	answerLine := strings.Count(content, "\n") + 2
 	if m.revealed {
 		answer, err := r.Render(m.due[m.index].card.Answer)
 		if err != nil {
 			return err
 		}
-		content += "\n\nAnswer\n\n" + strings.Trim(answer, "\n")
+		content += "\n\n" + m.palette.accent().Render("Answer") + "\n\n" + strings.Trim(answer, "\n")
 	}
 	offset := m.viewport.YOffset()
 	m.viewport.SetContent(content)
@@ -112,6 +119,9 @@ func (m *screen) render(jumpToAnswer bool) error {
 
 func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.BackgroundColorMsg:
+		m.palette.dark = msg.IsDark()
+		m.err = m.render(false)
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.err = m.render(false)

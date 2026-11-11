@@ -1,20 +1,25 @@
 package review
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/ansi"
+	"charm.land/glamour/v2/styles"
 
 	"github.com/prodzombie/gostudy/internal/card"
 )
 
-// Theme-neutral styles inherit the user's terminal foreground and background.
-// Code keeps its indentation; prose is wrapped by Glamour.
+// The plain renderer retains typographic emphasis without explicit colors.
 func newMarkdownRenderer(width int) (*glamour.TermRenderer, error) {
-	return glamour.NewTermRenderer(
-		glamour.WithWordWrap(width),
-		glamour.WithStylesFromJSONBytes([]byte(`{
+	return themedMarkdownRenderer(width, palette{noColor: true})
+}
+
+func themedMarkdownRenderer(width int, p palette) (*glamour.TermRenderer, error) {
+	var style ansi.StyleConfig
+	if err := json.Unmarshal([]byte(`{
             "document": {"margin": 0},
             "heading": {"bold": true, "block_suffix": "\n"},
             "strong": {"bold": true},
@@ -28,8 +33,21 @@ func newMarkdownRenderer(width int) (*glamour.TermRenderer, error) {
             "block_quote": {"indent": 1, "indent_token": "│ "},
             "link": {"underline": true},
             "task": {"ticked": "[x] ", "unticked": "[ ] "}
-        }`)),
-	)
+        }`), &style); err != nil {
+		return nil, err
+	}
+	if !p.noColor {
+		accent, _, _ := p.colors()
+		style.Heading.Color = &accent
+		style.Code.Color = &accent
+		style.Link.Color = &accent
+		syntax := styles.DarkStyleConfig.CodeBlock.Chroma
+		if !p.dark {
+			syntax = styles.LightStyleConfig.CodeBlock.Chroma
+		}
+		style.CodeBlock.Chroma = syntax
+	}
+	return glamour.NewTermRenderer(glamour.WithWordWrap(width), glamour.WithStyles(style))
 }
 
 // Plain output appends the answer, preserving a readable session transcript.
