@@ -58,7 +58,7 @@ func (m *screen) header() string {
 }
 
 func (m *screen) footer() string {
-	reading := "All content visible"
+	reading := ""
 	if m.viewport.TotalLineCount() > m.viewport.Height() {
 		reading = fmt.Sprintf("Scroll %.0f%%", m.viewport.ScrollPercent()*100)
 	}
@@ -70,7 +70,7 @@ func (m *screen) footer() string {
 	if m.help {
 		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nBackspace: clear grade · Ctrl+C: quit"
 	}
-	return reading + "\n" + controls + "\n" + help
+	return reading + "\n" + help + "\n" + controls
 }
 
 func (m *screen) layout() {
