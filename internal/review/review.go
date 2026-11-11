@@ -29,6 +29,9 @@ func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 	if file, ok := out.(*os.File); ok && os.Getenv("TERM") != "dumb" {
 		terminal = term.IsTerminal(int(file.Fd()))
 	}
+	if file, ok := in.(*os.File); !ok || !term.IsTerminal(int(file.Fd())) {
+		terminal = false
+	}
 	return run(store, tag, in, out, now, terminal)
 }
 
@@ -52,6 +55,10 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 		_, err := fmt.Fprintln(out, "No cards are due.")
 		return err
 	}
+	if terminal {
+		return runScreen(store, due, in, out, now)
+	}
+
 	scanner := bufio.NewScanner(in)
 	read := func(prompt string) (string, bool, error) {
 		if _, err := fmt.Fprint(out, prompt); err != nil {
@@ -77,7 +84,7 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 	}
 	confirmation := ""
 	for index, item := range due {
-		if err := showCard(out, item.card, false, terminal, index+1, len(due), confirmation); err != nil {
+		if err := showCard(out, item.card, false, index+1, len(due)); err != nil {
 			return err
 		}
 		for {
@@ -92,7 +99,7 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				break
 			}
 		}
-		if err := showCard(out, item.card, true, terminal, index+1, len(due), confirmation); err != nil {
+		if err := showCard(out, item.card, true, index+1, len(due)); err != nil {
 			return err
 		}
 		for {
@@ -123,11 +130,8 @@ func run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now fun
 				unit = "day"
 			}
 			confirmation = fmt.Sprintf("Previous card saved · due in %d %s", progress.Interval, unit)
-			// The next terminal frame carries confirmation; the final card has no next frame.
-			if !terminal || reviewed == len(due) {
-				if _, err := fmt.Fprintln(out, confirmation); err != nil {
-					return err
-				}
+			if _, err := fmt.Fprintln(out, confirmation); err != nil {
+				return err
 			}
 			break
 		}

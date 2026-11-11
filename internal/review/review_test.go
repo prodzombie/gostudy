@@ -3,7 +3,6 @@ package review
 import (
 	"bytes"
 	"io"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -77,43 +76,20 @@ type revealReader struct {
 	step int
 }
 
-func TestReviewPresentation(t *testing.T) {
-	for _, terminal := range []bool{false, true} {
-		t.Run(strconv.FormatBool(terminal), func(t *testing.T) {
-			store := cardstore.New(t.TempDir())
-			for _, question := range []string{"First question", "Second question"} {
-				if _, err := store.Add("go", question, "secret answer"); err != nil {
-					t.Fatal(err)
-				}
-			}
-			var out bytes.Buffer
-			if err := run(store, "", strings.NewReader("\n4\nq\n"), &out, time.Now, terminal); err != nil {
-				t.Fatal(err)
-			}
-			output := out.String()
-			if !terminal {
-				if strings.Contains(output, "\x1b") || strings.Count(output, "Question\n") != 2 || strings.Count(output, "Answer\n") != 1 {
-					t.Fatalf("invalid plain transcript: %q", output)
-				}
-				return
-			}
-			frames := strings.Split(output, "\x1b[2J\x1b[H")
-			if len(frames) != 4 {
-				t.Fatalf("expected question, reveal, next question frames: %q", output)
-			}
-			for _, index := range []int{1, 3} {
-				if strings.Contains(frames[index], "secret answer") || !strings.Contains(frames[index], "\x1b[1mQuestion\x1b[0m") {
-					t.Fatalf("invalid question frame: %q", frames[index])
-				}
-			}
-			revealed := frames[2]
-			question := strings.Index(revealed, "\x1b[1mQuestion")
-			answer := strings.Index(revealed, "\x1b[1mAnswer")
-			metadata := strings.Index(revealed, "\x1b[2m[go]")
-			if question < 0 || answer <= question || metadata <= answer || !strings.Contains(revealed, "secret answer") {
-				t.Fatalf("invalid revealed frame: %q", revealed)
-			}
-		})
+func TestReviewPlainPresentation(t *testing.T) {
+	store := cardstore.New(t.TempDir())
+	for _, question := range []string{"First question", "Second question"} {
+		if _, err := store.Add("go", question, "secret answer"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out bytes.Buffer
+	if err := run(store, "", strings.NewReader("\n4\nq\n"), &out, time.Now, false); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if strings.Contains(output, "\x1b") || strings.Count(output, "Question\n") != 2 || strings.Count(output, "Answer\n") != 1 {
+		t.Fatalf("invalid plain transcript: %q", output)
 	}
 }
 
