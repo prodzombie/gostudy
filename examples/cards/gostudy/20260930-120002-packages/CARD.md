@@ -16,8 +16,9 @@ Which package owns each responsibility in gostudy?
 - `internal/card` defines card and tag types and validates tag names.
 - `internal/cardstore` locates cards, reads Markdown, and persists review schedules.
 - `internal/huid` generates and validates identifiers.
-- `internal/review` runs the question, reveal, and grade interaction.
-- `internal/schedule` applies SM-2 grades to scheduling state.
+- `internal/review` runs the question, reveal, and recalled-or-forgot interaction.
+- `internal/schedule` models memory and applies SSP-MMC scheduling to review answers.
+- `internal/calendar` converts times into local calendar days.
 - `internal/editor` launches the command configured in `$EDITOR`.
 
-The scheduler takes a schedule, grade, and time and returns an updated schedule. It does not read files or prompt the user.
+The scheduler takes a schedule, whether the card was recalled, and a time, and returns an updated schedule. It does not read files or prompt the user.

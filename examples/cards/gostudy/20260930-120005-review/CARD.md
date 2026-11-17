@@ -16,8 +16,10 @@ What happens during a review, and how is progress saved?
 make run ARGS='-d examples review -t gostudy'
 ```
 
-Read the question, press Enter to reveal the answer, then grade your recall from 0 to 5. Grades 0–2 mean forgotten, 3 hard, 4 good, and 5 easy. `q` at either prompt stops the session; end of input also stops it.
+Read the question, press Enter to reveal the answer, then answer `r` if you recalled it or `f` if you forgot it. `q` at either prompt stops the session; end of input also stops it.
 
-Each valid grade is saved immediately. Quitting preserves completed reviews and leaves the current ungraded card unchanged.
+Each answer is saved immediately. Quitting preserves completed reviews and leaves the current unanswered card unchanged.
 
-SM-2 starts successful intervals at 1 day, then 6 days, then multiplies the previous interval by the ease factor. Forgetting resets the interval to 1 day. Progress lives in the frontmatter properties `ease_factor`, `interval`, `repetitions`, and `last_reviewed`. Other properties and the Markdown body are preserved.
+Each card has a memory half-life in days and a difficulty from 1 to 18. A recall lengthens the half-life, more so after a longer wait; forgetting resets it, usually to a much shorter one, and makes the card harder. The SSP-MMC scheduler then picks the interval that minimises expected total review time under its memory model. A new card starts at difficulty 5, about a 1.8-day half-life.
+
+Progress lives in the frontmatter properties `half_life`, `difficulty`, `interval`, and `last_reviewed`. Cards with old SM-2 properties start again as new. Other properties and the Markdown body are preserved.

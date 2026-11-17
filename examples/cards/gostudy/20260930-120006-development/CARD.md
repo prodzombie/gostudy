@@ -20,6 +20,6 @@ Run `make help` to see the available targets.
 - `make fmt` formats the Go source.
 - `make clean` removes the built CLI.
 
-The application uses only Go's standard library. Tests cover the card workflow, editor invocation, Markdown preservation, due-card selection, and interactive grading.
+The terminal interface uses Bubble Tea, Bubbles, Lip Gloss and Glamour; the rest uses Go's standard library. Tests cover the card workflow, editor invocation, Markdown preservation, scheduling, due-card selection, and interactive answers.
 
 A typical development loop is: change one behavior, run `make fmt`, then run `make check build`.
