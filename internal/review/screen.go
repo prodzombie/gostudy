@@ -165,7 +165,7 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.GotoTop()
 				m.err = m.render(false)
 			} else if len(m.grade) == 1 {
-				progress := schedule.Review(m.due[m.index].progress, m.grade[0] >= '3', m.now().UTC())
+				progress := schedule.Review(m.due[m.index].progress, m.grade[0] >= '3', m.now())
 				if err := m.store.SaveSchedule(m.due[m.index].card.ID.String(), progress); err != nil {
 					m.err = err
 					return m, tea.Quit

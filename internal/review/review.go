@@ -153,7 +153,7 @@ func runSession(store cardstore.Store, tag string, in io.Reader, out io.Writer, 
 				}
 				continue
 			}
-			progress := schedule.Review(item.progress, grade >= 3, now().UTC())
+			progress := schedule.Review(item.progress, grade >= 3, now())
 			if err := store.SaveSchedule(item.card.ID.String(), progress); err != nil {
 				return err
 			}
