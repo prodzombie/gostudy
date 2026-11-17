@@ -1,22 +1,20 @@
 package schedule
 
 import (
-	"fmt"
-	"math"
 	"time"
 
 	"github.com/prodzombie/gostudy/internal/calendar"
 	"github.com/prodzombie/gostudy/internal/huid"
 )
 
-// Schedule tracks a card's progress through spaced repetition.
-// A zero EaseFactor means the card has not been reviewed yet.
+// Schedule tracks a card's memory state and when it is next due.
+// A nil LastReviewed means the card has not been reviewed yet.
 type Schedule struct {
 	Card         huid.HUID
-	EaseFactor   float64
-	Interval     int
+	HalfLife     float64 // days until recall probability halves
+	Difficulty   int     // 1 to MaxDifficulty
+	Interval     int     // days from LastReviewed until the card is due
 	LastReviewed *time.Time
-	Repetitions  int
 }
 
 // Due reports whether the card should be reviewed on now's calendar day.
@@ -30,47 +28,36 @@ func (s Schedule) Due(now time.Time) bool {
 	return !reviewed.AddDays(s.Interval).After(calendar.DateOf(now))
 }
 
-// Review applies one SM-2 grade to a schedule and records when it happened.
-// Grades must be from 0 to 5. A forgotten card restarts at a one-day interval
-// without changing its ease factor; successful reviews update the ease factor.
-func Review(s Schedule, quality int, now time.Time) (Schedule, error) {
-	if quality < 0 || quality > 5 {
-		return s, fmt.Errorf("review quality must be between 0 and 5: %d", quality)
+// Review applies one review, recalled or forgotten, at now and schedules the
+// next one with the solved SSP-MMC policy.
+//
+// A card's first review is the exposure that starts its memory: whatever the
+// answer, the card enters the model at initialDifficulty and its starting
+// half-life. gostudy fixes the starting difficulty rather than letting the
+// first answer choose it.
+//
+// Later reviews read the recall probability from the whole calendar days
+// actually elapsed since the last review, in now's location (at least one),
+// not from the scheduled interval, so a late review that is still recalled
+// strengthens memory more. A recall lengthens the half-life; a lapse resets it
+// and makes the card harder.
+func Review(s Schedule, recalled bool, now time.Time) Schedule {
+	if s.LastReviewed == nil {
+		s.Difficulty = initialDifficulty
+		s.HalfLife = initialHalfLife(initialDifficulty)
+	} else {
+		reviewed := calendar.DateOf(s.LastReviewed.In(now.Location()))
+		// At zero elapsed days recall is certain and the forgetting formula is infinite.
+		elapsed := max(calendar.DateOf(now).DaysSince(reviewed), 1)
+		p := recallProbability(s.HalfLife, float64(elapsed))
+		if recalled {
+			s.HalfLife = halfLifeAfterRecall(s.HalfLife, s.Difficulty, p)
+		} else {
+			s.HalfLife = halfLifeAfterForgetting(s.HalfLife, s.Difficulty, p)
+			s.Difficulty = difficultyAfterForgetting(s.Difficulty)
+		}
 	}
-
-	if s.EaseFactor == 0 {
-		s.EaseFactor = 2.5
-	}
-
+	s.Interval = solvedPolicy().interval(s.HalfLife, s.Difficulty)
 	s.LastReviewed = &now
-
-	if quality < 3 {
-		s.Repetitions = 0
-		s.Interval = 1
-
-		return s, nil
-	}
-
-	s.Repetitions++
-
-	switch s.Repetitions {
-	case 1:
-		s.Interval = 1
-	case 2:
-		s.Interval = 6
-	default:
-		s.Interval = int(math.Round(float64(s.Interval) * s.EaseFactor))
-	}
-
-	q := float64(quality)
-
-	s.EaseFactor += 0.1 - (5-q)*(0.08+(5-q)*0.02)
-
-	if s.EaseFactor < 1.3 {
-		s.EaseFactor = 1.3
-	}
-
-	s.LastReviewed = &now
-
-	return s, nil
+	return s
 }

@@ -1,6 +1,7 @@
 package cardstore
 
 import (
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -41,21 +42,19 @@ func TestLoadAndSaveSchedulePreserveMarkdown(t *testing.T) {
 		t.Fatalf("loaded card: %+v; schedule: %+v", card, progress)
 	}
 	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
-	for _, interval := range []int{1, 6} {
-		progress, err = schedule.Review(progress, 5, now)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := store.SaveSchedule(id.String(), progress); err != nil {
+	for range 2 {
+		want := schedule.Review(progress, true, now)
+		if err := store.SaveSchedule(id.String(), want); err != nil {
 			t.Fatal(err)
 		}
 		_, progress, err = store.Load(id.String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		if progress.Interval != interval || !progress.LastReviewed.Equal(now) {
-			t.Fatalf("persisted schedule: %+v", progress)
+		if progress.HalfLife != want.HalfLife || progress.Difficulty != want.Difficulty || progress.Interval != want.Interval || !progress.LastReviewed.Equal(now) {
+			t.Fatalf("persisted schedule: %+v, want %+v", progress, want)
 		}
+		now = now.AddDate(0, 0, want.Interval)
 	}
 	saved, err := os.ReadFile(path)
 	if err != nil {
@@ -66,7 +65,7 @@ func TestLoadAndSaveSchedulePreserveMarkdown(t *testing.T) {
 	if oldBody != newBody || !strings.Contains(string(saved), "aliases:\r\n  - sample\r\ncustom: 'keep this'\r\n") {
 		t.Fatalf("card content changed: %s", saved)
 	}
-	if strings.Count(string(saved), "ease_factor:") != 1 {
+	if strings.Count(string(saved), "half_life:") != 1 {
 		t.Fatalf("duplicated schedule: %s", saved)
 	}
 	info, _ := os.Stat(path)
@@ -94,5 +93,35 @@ func TestLoadRejectsMalformedCards(t *testing.T) {
 		if _, _, err := store.Load(id.String()); err == nil {
 			t.Errorf("accepted malformed card: %q", content)
 		}
+	}
+}
+
+func savingAReviewedCard(t *testing.T, progress schedule.Schedule) error {
+	t.Helper()
+	store := New(t.TempDir())
+	id, err := store.Add("go", "Q", "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reviewed := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	progress.LastReviewed = &reviewed
+	return store.SaveSchedule(id.String(), progress)
+}
+
+func TestSaveRejectsAHalfLifeThatIsNotAPositiveNumber(t *testing.T) {
+	if savingAReviewedCard(t, schedule.Schedule{HalfLife: 0, Difficulty: 5, Interval: 1}) == nil {
+		t.Fatal("saved a zero half-life")
+	}
+	if savingAReviewedCard(t, schedule.Schedule{HalfLife: math.Inf(1), Difficulty: 5, Interval: 1}) == nil {
+		t.Fatal("saved an infinite half-life")
+	}
+}
+
+func TestSaveRejectsDifficultyOutsideItsRange(t *testing.T) {
+	if savingAReviewedCard(t, schedule.Schedule{HalfLife: 2, Difficulty: 0, Interval: 1}) == nil {
+		t.Fatal("saved difficulty 0")
+	}
+	if savingAReviewedCard(t, schedule.Schedule{HalfLife: 2, Difficulty: schedule.MaxDifficulty + 1, Interval: 1}) == nil {
+		t.Fatal("saved a difficulty above the maximum")
 	}
 }

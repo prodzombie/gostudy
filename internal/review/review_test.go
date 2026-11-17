@@ -31,10 +31,7 @@ func TestReviewSelectsDueCardsAndPersistsGrades(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		progress, err = schedule.Review(progress, 5, reviewedAt)
-		if err != nil {
-			t.Fatal(err)
-		}
+		progress = schedule.Review(progress, true, reviewedAt)
 		if err := store.SaveSchedule(id, progress); err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +43,7 @@ func TestReviewSelectsDueCardsAndPersistsGrades(t *testing.T) {
 	if !strings.Contains(out.String(), "Reviewed 2 cards.") || !strings.Contains(out.String(), "Enter a grade from 0 to 5.") || strings.Contains(out.String(), "Not due yet") || strings.Contains(out.String(), "Filtered out") {
 		t.Fatalf("session output: %s", &out)
 	}
-	for id, wantInterval := range map[string]int{never: 1, due: 6, future: 1} {
+	for id, wantInterval := range map[string]int{never: 1, due: 3, future: 1} {
 		_, progress, err := store.Load(id)
 		if err != nil {
 			t.Fatal(err)
@@ -83,10 +80,7 @@ func TestCardReviewedAfterLocalMidnightIsNotOfferedAgainThatDay(t *testing.T) {
 	}
 	// Saved as 23:30 UTC on 17 November: still the previous day in UTC.
 	reviewedAt := time.Date(2026, time.November, 18, 0, 30, 0, 0, rome)
-	progress, err := schedule.Review(schedule.Schedule{}, 5, reviewedAt)
-	if err != nil {
-		t.Fatal(err)
-	}
+	progress := schedule.Review(schedule.Schedule{}, true, reviewedAt)
 	if err := store.SaveSchedule(id.String(), progress); err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +188,7 @@ func TestCompletedGradeSurvivesQuittingNextCard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.LastReviewed == nil || first.Interval != 1 || first.Repetitions != 0 || second.LastReviewed != nil {
+	if first.LastReviewed == nil || first.Interval != 1 || second.LastReviewed != nil {
 		t.Fatalf("first: %+v; second: %+v", first, second)
 	}
 }

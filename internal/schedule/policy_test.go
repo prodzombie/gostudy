@@ -2,12 +2,8 @@ package schedule
 
 import (
 	"math"
-	"sync"
 	"testing"
 )
-
-// solvedPolicy shares one solve across tests because solving takes a while.
-var solvedPolicy = sync.OnceValue(solvePolicy)
 
 func TestReachingTheGoalCostsNothing(t *testing.T) {
 	if c := solvedPolicy().expectedCost(366, 5); c != 0 {

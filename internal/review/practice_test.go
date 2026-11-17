@@ -23,10 +23,7 @@ func TestPracticeIncludesFutureCardsWithoutWriting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	progress, err = schedule.Review(progress, 4, now)
-	if err != nil {
-		t.Fatal(err)
-	}
+	progress = schedule.Review(progress, true, now)
 	if err := store.SaveSchedule(id.String(), progress); err != nil {
 		t.Fatal(err)
 	}

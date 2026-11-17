@@ -15,7 +15,7 @@ import (
 	"github.com/prodzombie/gostudy/internal/schedule"
 )
 
-var scheduleKeys = []string{"ease_factor", "interval", "repetitions", "last_reviewed"}
+var scheduleKeys = []string{"half_life", "difficulty", "interval", "last_reviewed"}
 
 // Load reads a card's question, answer, and persisted schedule.
 // The directory layout supplies identity and tag; unknown frontmatter is preserved.
@@ -106,17 +106,17 @@ func parseSchedule(lines []string, id huid.HUID) (schedule.Schedule, error) {
 		return progress, fmt.Errorf("incomplete schedule properties")
 	}
 	var err error
-	progress.EaseFactor, err = strconv.ParseFloat(values["ease_factor"], 64)
+	progress.HalfLife, err = strconv.ParseFloat(values["half_life"], 64)
 	if err != nil {
-		return progress, fmt.Errorf("invalid ease_factor: %w", err)
+		return progress, fmt.Errorf("invalid half_life: %w", err)
+	}
+	progress.Difficulty, err = strconv.Atoi(values["difficulty"])
+	if err != nil {
+		return progress, fmt.Errorf("invalid difficulty: %w", err)
 	}
 	progress.Interval, err = strconv.Atoi(values["interval"])
 	if err != nil {
 		return progress, fmt.Errorf("invalid interval: %w", err)
-	}
-	progress.Repetitions, err = strconv.Atoi(values["repetitions"])
-	if err != nil {
-		return progress, fmt.Errorf("invalid repetitions: %w", err)
 	}
 	reviewed, err := time.Parse(time.RFC3339Nano, values["last_reviewed"])
 	if err != nil {
@@ -127,7 +127,9 @@ func parseSchedule(lines []string, id huid.HUID) (schedule.Schedule, error) {
 }
 
 func validateSchedule(progress schedule.Schedule) error {
-	if math.IsNaN(progress.EaseFactor) || math.IsInf(progress.EaseFactor, 0) || progress.EaseFactor < 1.3 || progress.Interval < 1 || progress.Repetitions < 0 || progress.LastReviewed == nil {
+	validHalfLife := progress.HalfLife > 0 && !math.IsInf(progress.HalfLife, 1) // NaN fails > 0
+	validDifficulty := progress.Difficulty >= 1 && progress.Difficulty <= schedule.MaxDifficulty
+	if !validHalfLife || !validDifficulty || progress.Interval < 1 || progress.LastReviewed == nil {
 		return fmt.Errorf("invalid review schedule")
 	}
 	return nil
@@ -171,9 +173,9 @@ func (s Store) SaveSchedule(id string, progress schedule.Schedule) error {
 		}
 	}
 	for _, property := range []string{
-		"ease_factor: " + strconv.FormatFloat(progress.EaseFactor, 'g', -1, 64),
+		"half_life: " + strconv.FormatFloat(progress.HalfLife, 'g', -1, 64),
+		"difficulty: " + strconv.Itoa(progress.Difficulty),
 		"interval: " + strconv.Itoa(progress.Interval),
-		"repetitions: " + strconv.Itoa(progress.Repetitions),
 		"last_reviewed: " + yamlString(progress.LastReviewed.UTC().Format(time.RFC3339Nano)),
 	} {
 		updated.WriteString(property + newline)

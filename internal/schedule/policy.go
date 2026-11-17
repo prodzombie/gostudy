@@ -1,6 +1,9 @@
 package schedule
 
-import "math"
+import (
+	"math"
+	"sync"
+)
 
 // Half-lives are solved on a grid of gridBase^k days for k from gridLowestPower
 // to gridHighestPower, about 0.23 to 366 days. The last grid point is the
@@ -43,6 +46,10 @@ type policy struct {
 	cost      [MaxDifficulty + 1][gridSize]float64
 	intervals [MaxDifficulty + 1][gridSize]int
 }
+
+// solvedPolicy solves the policy once, on first use, so commands that never
+// review a card do not pay for solving.
+var solvedPolicy = sync.OnceValue(solvePolicy)
 
 // gridIndex is the grid point nearest to halfLife in log space.
 func gridIndex(halfLife float64) int {
