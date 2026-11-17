@@ -136,3 +136,23 @@ func TestPressingFBeforeTheAnswerIsRevealedNeitherScrollsNorSaves(t *testing.T) 
 		t.Fatalf("after f before reveal: offset %d, schedule %+v, revealed %v; want no scroll and no save", m.viewport.YOffset(), got, m.revealed)
 	}
 }
+
+func TestScreenStatusNamesTheForgotGrade(t *testing.T) {
+	now := time.Date(2026, time.November, 17, 12, 0, 0, 0, time.UTC)
+	store, id, _ := cardReviewedBefore(t, now)
+	m := revealedScreen(t, store, id, now)
+	keyPress(m, 'f')
+	if want := "Previous card: forgot · due in 1 day"; m.status != want {
+		t.Fatalf("status after f = %q, want %q", m.status, want)
+	}
+}
+
+func TestScreenStatusNamesTheRecalledGrade(t *testing.T) {
+	now := time.Date(2026, time.November, 17, 12, 0, 0, 0, time.UTC)
+	store, id, _ := cardReviewedBefore(t, now)
+	m := revealedScreen(t, store, id, now)
+	keyPress(m, 'r')
+	if !strings.HasPrefix(m.status, "Previous card: recalled · due in ") {
+		t.Fatalf("status after r = %q, want it to name the recalled grade", m.status)
+	}
+}

@@ -178,7 +178,11 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if progress.Interval == 1 {
 					unit = "day"
 				}
-				m.status = fmt.Sprintf("Previous card saved · due in %d %s", progress.Interval, unit)
+				grade := "forgot"
+				if key == "r" {
+					grade = "recalled"
+				}
+				m.status = fmt.Sprintf("Previous card: %s · due in %d %s", grade, progress.Interval, unit)
 				return m, m.next()
 			}
 		default:
