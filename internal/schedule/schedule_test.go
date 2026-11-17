@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 	"time"
+	_ "time/tzdata" // Load Europe/Rome regardless of the machine's zone database.
 )
 
 func TestReviewProgressionAndForgottenCard(t *testing.T) {
@@ -56,9 +57,39 @@ func TestCardIsNotDueBeforeItsIntervalHasPassed(t *testing.T) {
 	reviewed := time.Date(2026, time.November, 17, 12, 0, 0, 0, time.UTC)
 	s := Schedule{Interval: 1, LastReviewed: &reviewed}
 
-	if s.Due(reviewed.AddDate(0, 0, 1).Add(-time.Nanosecond)) {
+	if s.Due(time.Date(2026, time.November, 17, 23, 59, 59, 0, time.UTC)) {
 		t.Fatal("a card should not be due before its interval has passed")
 	}
+}
+
+func TestCardIsDueAtAnyTimeOnItsDueDay(t *testing.T) {
+	rome := loadRome(t)
+	reviewed := time.Date(2026, time.November, 17, 22, 30, 0, 0, rome)
+	s := Schedule{Interval: 1, LastReviewed: &reviewed}
+
+	if !s.Due(time.Date(2026, time.November, 18, 8, 0, 0, 0, rome)) {
+		t.Fatal("a card reviewed yesterday evening should be due this morning")
+	}
+}
+
+func TestReviewDayIsTheLocalCalendarDay(t *testing.T) {
+	rome := loadRome(t)
+	// Stored as 23:30 UTC on 17 November, but reviewed on 18 November in Rome.
+	reviewed := time.Date(2026, time.November, 18, 0, 30, 0, 0, rome).UTC()
+	s := Schedule{Interval: 1, LastReviewed: &reviewed}
+
+	if s.Due(time.Date(2026, time.November, 18, 20, 0, 0, 0, rome)) {
+		t.Fatal("a card reviewed after local midnight should not be due again the same local day")
+	}
+}
+
+func loadRome(t *testing.T) *time.Location {
+	t.Helper()
+	location, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return location
 }
 
 func TestReviewRejectsInvalidQuality(t *testing.T) {

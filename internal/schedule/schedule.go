@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/prodzombie/gostudy/internal/calendar"
 	"github.com/prodzombie/gostudy/internal/huid"
 )
 
@@ -18,13 +19,15 @@ type Schedule struct {
 	Repetitions  int
 }
 
-// Due reports whether the card should be reviewed at now.
-// A card that has never been reviewed is always due.
+// Due reports whether the card should be reviewed on now's calendar day.
+// The review time is read as a day in now's location, so a card becomes due
+// at local midnight. A card that has never been reviewed is always due.
 func (s Schedule) Due(now time.Time) bool {
 	if s.LastReviewed == nil {
 		return true
 	}
-	return !s.LastReviewed.UTC().AddDate(0, 0, s.Interval).After(now.UTC())
+	reviewed := calendar.DateOf(s.LastReviewed.In(now.Location()))
+	return !reviewed.AddDays(s.Interval).After(calendar.DateOf(now))
 }
 
 // Review applies one SM-2 grade to a schedule and records when it happened.

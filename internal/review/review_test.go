@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	_ "time/tzdata" // Load Europe/Rome regardless of the machine's zone database.
 
 	"github.com/prodzombie/gostudy/internal/cardstore"
 	"github.com/prodzombie/gostudy/internal/schedule"
@@ -67,6 +68,36 @@ func TestReviewSelectsDueCardsAndPersistsGrades(t *testing.T) {
 	}
 	if out.String() != "No cards are due.\n" {
 		t.Fatalf("second session: %s", &out)
+	}
+}
+
+func TestCardReviewedAfterLocalMidnightIsNotOfferedAgainThatDay(t *testing.T) {
+	rome, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := cardstore.New(t.TempDir())
+	id, err := store.Add("go", "Reviewed just after midnight", "secret answer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Saved as 23:30 UTC on 17 November: still the previous day in UTC.
+	reviewedAt := time.Date(2026, time.November, 18, 0, 30, 0, 0, rome)
+	progress, err := schedule.Review(schedule.Schedule{}, 5, reviewedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveSchedule(id.String(), progress); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	sameEvening := func() time.Time { return time.Date(2026, time.November, 18, 20, 0, 0, 0, rome) }
+	if err := Run(store, "go", strings.NewReader(""), &out, sameEvening); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != "No cards are due.\n" {
+		t.Fatalf("a card reviewed today in local time was offered again: %s", &out)
 	}
 }
 
