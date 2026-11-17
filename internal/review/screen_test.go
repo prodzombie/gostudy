@@ -30,8 +30,9 @@ func TestScreenRevealScrollResizeAndSave(t *testing.T) {
 		t.Fatal("answer leaked")
 	}
 	keyPress(m, 'r')
-	if m.grade != "" {
-		t.Fatal("grade accepted before reveal")
+	_, early, _ := store.Load(id.String())
+	if early.LastReviewed != nil {
+		t.Fatal("grade saved before reveal")
 	}
 	keyPress(m, tea.KeyEnter)
 	if !strings.Contains(m.viewport.View(), "Answer paragraph") || m.viewport.YOffset() == 0 {
@@ -47,11 +48,6 @@ func TestScreenRevealScrollResizeAndSave(t *testing.T) {
 		t.Fatal("viewport did not resize")
 	}
 	keyPress(m, 'r')
-	_, unchanged, _ := store.Load(id.String())
-	if unchanged.LastReviewed != nil {
-		t.Fatal("grade saved before Enter")
-	}
-	keyPress(m, tea.KeyEnter)
 	_, saved, err := store.Load(id.String())
 	if err != nil || saved.LastReviewed == nil || m.index != 1 {
 		t.Fatalf("save failed: %v", err)
@@ -71,7 +67,6 @@ func TestScreenQuitDoesNotSave(t *testing.T) {
 	m := &screen{store: store, due: []dueCard{{c, progress}}, now: time.Now, viewport: viewport.New()}
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	keyPress(m, tea.KeyEnter)
-	keyPress(m, 'r')
 	keyPress(m, 'q')
 	_, saved, err := store.Load(id.String())
 	if err != nil || saved.LastReviewed != nil {

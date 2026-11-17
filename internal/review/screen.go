@@ -23,7 +23,7 @@ type screen struct {
 	viewport             viewport.Model
 	width, height, index int
 	revealed, help       bool
-	grade, status        string // grade is "r", "f" or "" (none selected)
+	status               string
 	err                  error
 	palette              palette
 	practice             bool
@@ -31,9 +31,6 @@ type screen struct {
 
 // newViewport scrolls the card. f is removed from the default page-down keys
 // because it answers "forgot".
-// answerLabels names the answer keys in the footer; "" shows nothing selected.
-var answerLabels = map[string]string{"r": "recalled", "f": "forgot"}
-
 func newViewport() viewport.Model {
 	v := viewport.New()
 	v.KeyMap.PageDown.SetKeys("pgdown", "space")
@@ -91,14 +88,14 @@ func (m *screen) footer() string {
 	}
 	controls := m.palette.accent().Render("Enter: reveal")
 	if m.revealed {
-		controls = "r: recalled · f: forgot\n" + m.palette.accent().Render("Answer: "+answerLabels[m.grade]+" · Enter: save")
+		controls = m.palette.accent().Render("r: recalled · f: forgot")
 	}
 	if m.practice && m.revealed {
 		controls = m.palette.accent().Render("Enter: next card")
 	}
 	help := "↑/↓ scroll · PgUp/PgDn page · ? help · q quit"
 	if m.help {
-		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nBackspace: clear answer · Ctrl+C: quit"
+		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nCtrl+C: quit"
 	}
 	return m.palette.secondary().Render(reading) + "\n" + m.palette.secondary().Render(help) + "\n" + controls
 }
@@ -168,15 +165,11 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.revealed = true
 				m.err = m.render(true)
 			} else if m.practice {
-				m.index++
-				if m.index == len(m.due) {
-					return m, tea.Quit
-				}
-				m.revealed = false
-				m.viewport.GotoTop()
-				m.err = m.render(false)
-			} else if m.grade != "" {
-				progress := schedule.Review(m.due[m.index].progress, m.grade == "r", m.now())
+				return m, m.next()
+			}
+		case "r", "f":
+			if m.revealed && !m.practice {
+				progress := schedule.Review(m.due[m.index].progress, key == "r", m.now())
 				if err := m.store.SaveSchedule(m.due[m.index].card.ID.String(), progress); err != nil {
 					m.err = err
 					return m, tea.Quit
@@ -186,20 +179,8 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					unit = "day"
 				}
 				m.status = fmt.Sprintf("Previous card saved · due in %d %s", progress.Interval, unit)
-				m.index++
-				if m.index == len(m.due) {
-					return m, tea.Quit
-				}
-				m.revealed, m.grade = false, ""
-				m.viewport.GotoTop()
-				m.err = m.render(false)
+				return m, m.next()
 			}
-		case "r", "f":
-			if m.revealed && !m.practice {
-				m.grade = key
-			}
-		case "backspace":
-			m.grade = ""
 		default:
 			var cmd tea.Cmd
 			m.viewport, cmd = m.viewport.Update(msg)
@@ -214,6 +195,20 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+// next advances to the following card's question, quitting after the last one.
+func (m *screen) next() tea.Cmd {
+	m.index++
+	if m.index == len(m.due) {
+		return tea.Quit
+	}
+	m.revealed = false
+	m.viewport.GotoTop()
+	if m.err = m.render(false); m.err != nil {
+		return tea.Quit
+	}
+	return nil
 }
 
 func (m *screen) View() tea.View {

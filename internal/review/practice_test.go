@@ -54,7 +54,7 @@ func TestPracticeIncludesFutureCardsWithoutWriting(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	keyPress(m, tea.KeyEnter)
 	keyPress(m, 'r')
-	if m.grade != "" || !strings.Contains(m.footer(), "Enter: next card") {
+	if m.index != 0 || !strings.Contains(m.footer(), "Enter: next card") {
 		t.Fatal("practice offered grading")
 	}
 	keyPress(m, tea.KeyEnter)
