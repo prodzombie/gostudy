@@ -63,3 +63,22 @@ func TestLaterDateIsAfterEarlierDate(t *testing.T) {
 		t.Fatal("a date should not be after itself")
 	}
 }
+
+func TestDaysSinceTheSameDayIsZero(t *testing.T) {
+	morning := DateOf(time.Date(2026, time.November, 17, 0, 0, 0, 0, time.UTC))
+	night := DateOf(time.Date(2026, time.November, 17, 23, 59, 59, 0, time.UTC))
+
+	if got := night.DaysSince(morning); got != 0 {
+		t.Fatalf("days between two times on the same day = %d, want 0", got)
+	}
+}
+
+func TestDaysSinceCountsCalendarDaysAcrossDaylightSavingChange(t *testing.T) {
+	// Rome's clocks go back on 25 October 2026; 26 hours pass but only two days.
+	before := DateOf(time.Date(2026, time.October, 24, 23, 30, 0, 0, rome(t)))
+	after := DateOf(time.Date(2026, time.October, 26, 0, 30, 0, 0, rome(t)))
+
+	if got := after.DaysSince(before); got != 2 {
+		t.Fatalf("days from %v to %v = %d, want 2", before, after, got)
+	}
+}

@@ -24,6 +24,13 @@ func (d Date) After(other Date) bool {
 	return d.t.After(other.t)
 }
 
+// DaysSince returns the number of calendar days from earlier to d. It is
+// negative when earlier is the later date.
+func (d Date) DaysSince(earlier Date) int {
+	// Both dates are UTC midnights, so the difference is a whole number of days.
+	return int(d.t.Sub(earlier.t) / (24 * time.Hour))
+}
+
 // String formats the date as YYYY-MM-DD.
 func (d Date) String() string {
 	return d.t.Format(time.DateOnly)
