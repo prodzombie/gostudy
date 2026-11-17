@@ -23,14 +23,25 @@ type screen struct {
 	viewport             viewport.Model
 	width, height, index int
 	revealed, help       bool
-	grade, status        string
+	grade, status        string // grade is "r", "f" or "" (none selected)
 	err                  error
 	palette              palette
 	practice             bool
 }
 
+// newViewport scrolls the card. f is removed from the default page-down keys
+// because it answers "forgot".
+// answerLabels names the answer keys in the footer; "" shows nothing selected.
+var answerLabels = map[string]string{"r": "recalled", "f": "forgot"}
+
+func newViewport() viewport.Model {
+	v := viewport.New()
+	v.KeyMap.PageDown.SetKeys("pgdown", "space")
+	return v
+}
+
 func runScreen(store cardstore.Store, due []dueCard, in io.Reader, out io.Writer, now func() time.Time, options Options) error {
-	m := &screen{practice: options.Practice, store: store, due: due, now: now, viewport: viewport.New(), palette: palette{dark: true, noColor: os.Getenv("NO_COLOR") != ""}}
+	m := &screen{practice: options.Practice, store: store, due: due, now: now, viewport: newViewport(), palette: palette{dark: true, noColor: os.Getenv("NO_COLOR") != ""}}
 	if _, err := tea.NewProgram(m, tea.WithInput(in), tea.WithOutput(out)).Run(); err != nil {
 		return err
 	}
@@ -80,14 +91,14 @@ func (m *screen) footer() string {
 	}
 	controls := m.palette.accent().Render("Enter: reveal")
 	if m.revealed {
-		controls = "Grade 0–5: 0–2 forgotten · 3 hard · 4 good · 5 easy\n" + m.palette.accent().Render("Grade: "+m.grade+" · Enter: save")
+		controls = "r: recalled · f: forgot\n" + m.palette.accent().Render("Answer: "+answerLabels[m.grade]+" · Enter: save")
 	}
 	if m.practice && m.revealed {
 		controls = m.palette.accent().Render("Enter: next card")
 	}
 	help := "↑/↓ scroll · PgUp/PgDn page · ? help · q quit"
 	if m.help {
-		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nBackspace: clear grade · Ctrl+C: quit"
+		help += "\nHome/End: top/bottom · j/k: scroll · mouse wheel: scroll\nBackspace: clear answer · Ctrl+C: quit"
 	}
 	return m.palette.secondary().Render(reading) + "\n" + m.palette.secondary().Render(help) + "\n" + controls
 }
@@ -164,8 +175,8 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.revealed = false
 				m.viewport.GotoTop()
 				m.err = m.render(false)
-			} else if len(m.grade) == 1 {
-				progress := schedule.Review(m.due[m.index].progress, m.grade[0] >= '3', m.now())
+			} else if m.grade != "" {
+				progress := schedule.Review(m.due[m.index].progress, m.grade == "r", m.now())
 				if err := m.store.SaveSchedule(m.due[m.index].card.ID.String(), progress); err != nil {
 					m.err = err
 					return m, tea.Quit
@@ -183,7 +194,7 @@ func (m *screen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.viewport.GotoTop()
 				m.err = m.render(false)
 			}
-		case "0", "1", "2", "3", "4", "5":
+		case "r", "f":
 			if m.revealed && !m.practice {
 				m.grade = key
 			}

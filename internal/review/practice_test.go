@@ -35,10 +35,10 @@ func TestPracticeIncludesFutureCardsWithoutWriting(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := RunWithOptions(store, "go", strings.NewReader("\n4\n\n"), &out, func() time.Time { return now }, Options{Practice: true}); err != nil {
+	if err := RunWithOptions(store, "go", strings.NewReader("\nr\n\n"), &out, func() time.Time { return now }, Options{Practice: true}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "Future card") || !strings.Contains(out.String(), "Practiced 1 card") || strings.Contains(out.String(), "Filtered card") || strings.Contains(out.String(), "Grade 0") {
+	if !strings.Contains(out.String(), "Future card") || !strings.Contains(out.String(), "Practiced 1 card") || strings.Contains(out.String(), "Filtered card") || strings.Contains(out.String(), "r recalled") {
 		t.Fatalf("practice output: %s", &out)
 	}
 	after, err := store.Read(id.String())
@@ -53,7 +53,7 @@ func TestPracticeIncludesFutureCardsWithoutWriting(t *testing.T) {
 	m := &screen{store: store, due: []dueCard{{c, progress}}, now: time.Now, viewport: viewport.New(), practice: true}
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	keyPress(m, tea.KeyEnter)
-	keyPress(m, '4')
+	keyPress(m, 'r')
 	if m.grade != "" || !strings.Contains(m.footer(), "Enter: next card") {
 		t.Fatal("practice offered grading")
 	}

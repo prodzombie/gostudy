@@ -43,7 +43,7 @@ func cardReviewedTwoLocalDaysAgo(t *testing.T) (cardstore.Store, string, time.Ti
 func TestLineReviewCountsElapsedDaysInTheSessionsTimeZone(t *testing.T) {
 	store, id, session, want := cardReviewedTwoLocalDaysAgo(t)
 	var out bytes.Buffer
-	if err := Run(store, "go", strings.NewReader("\n5\n"), &out, func() time.Time { return session }); err != nil {
+	if err := Run(store, "go", strings.NewReader("\nr\n"), &out, func() time.Time { return session }); err != nil {
 		t.Fatal(err)
 	}
 	_, got, err := store.Load(id)
@@ -64,7 +64,7 @@ func TestScreenReviewCountsElapsedDaysInTheSessionsTimeZone(t *testing.T) {
 	m := &screen{store: store, due: []dueCard{{c, progress}}, now: func() time.Time { return session }, viewport: viewport.New()}
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	keyPress(m, tea.KeyEnter)
-	keyPress(m, '5')
+	keyPress(m, 'r')
 	keyPress(m, tea.KeyEnter)
 	_, got, err := store.Load(id)
 	if err != nil {

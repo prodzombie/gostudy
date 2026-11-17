@@ -37,10 +37,10 @@ func TestReviewSelectsDueCardsAndPersistsGrades(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	if err := Run(store, "go", strings.NewReader("\n6\ninvalid\n5\n\n5\n"), &out, func() time.Time { return now }); err != nil {
+	if err := Run(store, "go", strings.NewReader("\n6\ninvalid\nr\n\nr\n"), &out, func() time.Time { return now }); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "Reviewed 2 cards.") || !strings.Contains(out.String(), "Enter a grade from 0 to 5.") || strings.Contains(out.String(), "Not due yet") || strings.Contains(out.String(), "Filtered out") {
+	if !strings.Contains(out.String(), "Reviewed 2 cards.") || !strings.Contains(out.String(), "Enter r or f.") || strings.Contains(out.String(), "Not due yet") || strings.Contains(out.String(), "Filtered out") {
 		t.Fatalf("session output: %s", &out)
 	}
 	for id, wantInterval := range map[string]int{never: 1, due: 3, future: 1} {
@@ -109,7 +109,7 @@ func TestReviewPlainPresentation(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	if err := run(store, "", strings.NewReader("\n4\nq\n"), &out, time.Now, false); err != nil {
+	if err := run(store, "", strings.NewReader("\nr\nq\n"), &out, time.Now, false); err != nil {
 		t.Fatal(err)
 	}
 	output := out.String()
@@ -131,7 +131,7 @@ func (r *revealReader) Read(p []byte) (int, error) {
 			r.t.Fatal("answer missing before grade prompt")
 		}
 		r.step++
-		return copy(p, "4\n"), nil
+		return copy(p, "r\n"), nil
 	default:
 		return 0, io.EOF
 	}
@@ -177,7 +177,7 @@ func TestCompletedGradeSurvivesQuittingNextCard(t *testing.T) {
 	}
 	entries, _ := store.List("")
 	var out bytes.Buffer
-	if err := Run(store, "", strings.NewReader("\n2\nq\n"), &out, time.Now); err != nil {
+	if err := Run(store, "", strings.NewReader("\nf\nq\n"), &out, time.Now); err != nil {
 		t.Fatal(err)
 	}
 	_, first, err := store.Load(entries[0].ID)

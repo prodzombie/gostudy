@@ -1,4 +1,4 @@
-// Package review runs interactive study sessions using the SM-2 scheduler.
+// Package review runs interactive study sessions using the SSP-MMC scheduler.
 package review
 
 import (
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,8 +24,8 @@ type dueCard struct {
 	progress schedule.Schedule
 }
 
-// Run reviews due cards, saving each grade before continuing to the next card.
-// Quitting or reaching EOF leaves the current ungraded card unchanged.
+// Run reviews due cards, saving each answer before continuing to the next card.
+// Quitting or reaching EOF leaves the current unanswered card unchanged.
 func Run(store cardstore.Store, tag string, in io.Reader, out io.Writer, now func() time.Time) error {
 	return RunWithOptions(store, tag, in, out, now, Options{})
 }
@@ -128,7 +127,7 @@ func runSession(store cardstore.Store, tag string, in io.Reader, out io.Writer, 
 			return err
 		}
 		for {
-			prompt := "Grade 0–5 (0–2 forgotten, 3 hard, 4 good, 5 easy; q to quit): "
+			prompt := "r recalled · f forgot (q to quit): "
 			if options.Practice {
 				prompt = "Press Enter for the next card (q to quit): "
 			}
@@ -146,14 +145,13 @@ func runSession(store cardstore.Store, tag string, in io.Reader, out io.Writer, 
 				reviewed++
 				break
 			}
-			grade, err := strconv.Atoi(input)
-			if err != nil || grade < 0 || grade > 5 {
-				if _, err := fmt.Fprintln(out, "Enter a grade from 0 to 5."); err != nil {
+			if input != "r" && input != "f" {
+				if _, err := fmt.Fprintln(out, "Enter r or f."); err != nil {
 					return err
 				}
 				continue
 			}
-			progress := schedule.Review(item.progress, grade >= 3, now())
+			progress := schedule.Review(item.progress, input == "r", now())
 			if err := store.SaveSchedule(item.card.ID.String(), progress); err != nil {
 				return err
 			}

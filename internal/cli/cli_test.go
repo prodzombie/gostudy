@@ -94,7 +94,7 @@ func TestReviewCommand(t *testing.T) {
 		t.Fatal(errOut.String())
 	}
 	out.Reset()
-	if status := Run([]string{"-d", root, "review", "-t", "go"}, strings.NewReader("\n5\n"), &out, &errOut); status != 0 || !strings.Contains(out.String(), "Reviewed 1 card.") {
+	if status := Run([]string{"-d", root, "review", "-t", "go"}, strings.NewReader("\nr\n"), &out, &errOut); status != 0 || !strings.Contains(out.String(), "Reviewed 1 card.") {
 		t.Fatalf("review output: %s; error: %s; status: %d", &out, &errOut, status)
 	}
 	for _, args := range [][]string{{"review", "-t", "../bad"}, {"review", "extra"}} {
