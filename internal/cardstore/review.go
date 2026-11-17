@@ -17,6 +17,21 @@ import (
 
 var scheduleKeys = []string{"half_life", "difficulty", "interval", "last_reviewed"}
 
+// sm2Keys are properties written by the earlier SM-2 scheduler. A card with
+// any of them loads as never reviewed and loses them when next saved. SM-2
+// progress has no half-life or difficulty, and resetting such cards was
+// preferred over inventing a conversion.
+var sm2Keys = []string{"ease_factor", "repetitions"}
+
+func sm2Property(line string) bool {
+	for _, key := range sm2Keys {
+		if strings.HasPrefix(line, key+":") {
+			return true
+		}
+	}
+	return false
+}
+
 // Load reads a card's question, answer, and persisted schedule.
 // The directory layout supplies identity and tag; unknown frontmatter is preserved.
 func (s Store) Load(id string) (card.Card, schedule.Schedule, error) {
@@ -75,6 +90,11 @@ func scheduleProperty(line string) (string, string, bool) {
 
 func parseSchedule(lines []string, id huid.HUID) (schedule.Schedule, error) {
 	progress := schedule.Schedule{Card: id}
+	for _, line := range lines {
+		if sm2Property(line) {
+			return progress, nil
+		}
+	}
 	values := make(map[string]string)
 	for _, line := range lines {
 		key, value, ok := scheduleProperty(line)
@@ -168,7 +188,7 @@ func (s Store) SaveSchedule(id string, progress schedule.Schedule) error {
 	var updated strings.Builder
 	updated.WriteString(lines[0])
 	for _, line := range lines[1:end] {
-		if _, _, owned := scheduleProperty(line); !owned {
+		if _, _, owned := scheduleProperty(line); !owned && !sm2Property(line) {
 			updated.WriteString(line)
 		}
 	}
