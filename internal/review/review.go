@@ -52,14 +52,14 @@ func runSession(store cardstore.Store, tag string, in io.Reader, out io.Writer, 
 	if err != nil {
 		return err
 	}
-	cutoff := now().UTC()
+	current := now()
 	var due []dueCard
 	for _, entry := range entries {
 		content, progress, err := store.Load(entry.ID)
 		if err != nil {
 			return err
 		}
-		if options.Practice || progress.LastReviewed == nil || !progress.LastReviewed.UTC().AddDate(0, 0, progress.Interval).After(cutoff) {
+		if options.Practice || progress.Due(current) {
 			due = append(due, dueCard{content, progress})
 		}
 	}

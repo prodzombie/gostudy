@@ -18,6 +18,15 @@ type Schedule struct {
 	Repetitions  int
 }
 
+// Due reports whether the card should be reviewed at now.
+// A card that has never been reviewed is always due.
+func (s Schedule) Due(now time.Time) bool {
+	if s.LastReviewed == nil {
+		return true
+	}
+	return !s.LastReviewed.UTC().AddDate(0, 0, s.Interval).After(now.UTC())
+}
+
 // Review applies one SM-2 grade to a schedule and records when it happened.
 // Grades must be from 0 to 5. A forgotten card restarts at a one-day interval
 // without changing its ease factor; successful reviews update the ease factor.

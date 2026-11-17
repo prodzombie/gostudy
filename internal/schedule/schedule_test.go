@@ -37,6 +37,30 @@ func TestReviewProgressionAndForgottenCard(t *testing.T) {
 	}
 }
 
+func TestNeverReviewedCardIsDue(t *testing.T) {
+	if !(Schedule{}).Due(time.Now()) {
+		t.Fatal("a card that was never reviewed should be due")
+	}
+}
+
+func TestCardIsDueOnceItsIntervalHasPassed(t *testing.T) {
+	reviewed := time.Date(2026, time.November, 17, 12, 0, 0, 0, time.UTC)
+	s := Schedule{Interval: 1, LastReviewed: &reviewed}
+
+	if !s.Due(reviewed.AddDate(0, 0, 1)) {
+		t.Fatal("a card should be due once its interval has passed")
+	}
+}
+
+func TestCardIsNotDueBeforeItsIntervalHasPassed(t *testing.T) {
+	reviewed := time.Date(2026, time.November, 17, 12, 0, 0, 0, time.UTC)
+	s := Schedule{Interval: 1, LastReviewed: &reviewed}
+
+	if s.Due(reviewed.AddDate(0, 0, 1).Add(-time.Nanosecond)) {
+		t.Fatal("a card should not be due before its interval has passed")
+	}
+}
+
 func TestReviewRejectsInvalidQuality(t *testing.T) {
 	for _, quality := range []int{-1, 6} {
 		original := Schedule{EaseFactor: 2.5, Interval: 6, Repetitions: 2}
